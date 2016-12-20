@@ -1,3 +1,4 @@
+import os
 import sys
 import urllib
 from tqdm import tqdm, trange
@@ -13,18 +14,15 @@ nicoId = sys.argv[1]
 nicoPw = sys.argv[2]
 videoIds = sys.argv[3:]
 
-# for it in trange(3):
-#     for jt in trange(100):
-#         sleep(0.01)
-
 def downloadVideo(sess, url, title):
     response = sess.get(url, stream=True)
     total_length = int(response.headers.get('Content-Length', 0))
     
     extension = guess_extension(response.headers.get('Content-Type'))
     fileName = title + extension
+    filePath = os.path.join("output", fileName)
     
-    with open(fileName, "wb") as handle:
+    with open(filePath, "wb") as handle:
         for data in tqdm(response.iter_content(), total=total_length):
             handle.write(data)
             
