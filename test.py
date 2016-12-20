@@ -18,13 +18,26 @@ def downloadVideo(sess, url, title):
     response = sess.get(url, stream=True)
     total_length = int(response.headers.get('Content-Length', 0))
     
-    extension = guess_extension(response.headers.get('Content-Type'))
+    contentType = response.headers.get('Content-Type')
+    extension = guess_extension(contentType)
+    if extension is None:
+        extensionCandidates = contentType.split("/")
+        if len(extensionCandidates) > 1:
+            extension = "." + extensionCandidates[1]
+        else:
+            extension = ""
+
     fileName = title + extension
-    filePath = os.path.join("output", fileName)
-    
+    directoryName = "output"
+    filePath = os.path.join(directoryName, fileName)
+
+    if not os.path.exists(directoryName):
+        os.makedirs(directoryName)
+
     with open(filePath, "wb") as handle:
         for data in tqdm(response.iter_content(), total=total_length):
             handle.write(data)
+            # handle.flush()
             
 with requests.session() as sess:
     loginUrl = "https://secure.nicovideo.jp/secure/login?site=niconico&mail=%s&password=%s" % (nicoId, nicoPw)
