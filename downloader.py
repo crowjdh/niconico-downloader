@@ -7,12 +7,16 @@ from time import sleep
 from bs4 import BeautifulSoup
 from mimetypes import guess_extension
 
-if len(sys.argv) < 4:
-    print "Usage: python filename email pw videoId [videoIds]"
+if len(sys.argv) < 5:
+    print "Usage:"
+    print "With video ids: python filename email pw v videoId [videoIds]"
+    print "With mylist ids: python filename email pw m mylistId"
     sys.exit()
 nicoId = sys.argv[1]
 nicoPw = sys.argv[2]
-videoIds = sys.argv[3:]
+mode = sys.argv[3]
+args = sys.argv[4:]
+# videoIds = sys.argv[4:]
 
 def downloadVideo(sess, url, title):
     # if True:
@@ -49,13 +53,28 @@ def downloadVideo(sess, url, title):
             pbar.update(len(data))
         # for data in tqdm(response.iter_content(chunk_size=1024), total=total_length):
         #     handle.write(data)
-            
-with requests.session() as sess:
+
+def login(sess, nicoId, nicoPw):
     loginUrl = "https://secure.nicovideo.jp/secure/login?site=niconico&mail=%s&password=%s" % (nicoId, nicoPw)
     response = sess.post(loginUrl)
     soup = BeautifulSoup(response.text, 'html.parser')
-    loginSuccessful = len(soup.select("div.notice.error")) <= 0
-    if loginSuccessful:
+    return len(soup.select("div.notice.error")) <= 0
+
+def getVideoIds(sess, mylistId):
+    videoIds = args
+
+    if mode == "m":
+        mylistUrl = "http://www.nicovideo.jp/mylist/%s" % mylistId
+        response = sess.get(mylistUrl)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        print len(soup.find_all("a", class_="watch"))
+    return videoIds
+
+with requests.session() as sess:
+    if login(sess, nicoId, nicoPw):
+        videoIds = getVideoIds(sess, mode, args)
+        exit()
+
         videoPageUrls = ["http://www.nicovideo.jp/watch/%s?watch_harmful=1" % videoId for videoId in videoIds]
         videoApiUrls = ["http://flapi.nicovideo.jp/api/getflv/%s?as3=1" % videoId for videoId in videoIds]
         
