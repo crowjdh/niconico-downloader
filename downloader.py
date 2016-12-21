@@ -6,6 +6,7 @@ import requests
 from time import sleep
 from bs4 import BeautifulSoup
 from mimetypes import guess_extension
+import unicodedata
 
 if len(sys.argv) < 5:
     print "Usage:"
@@ -60,25 +61,26 @@ def login(sess, nicoId, nicoPw):
     soup = BeautifulSoup(response.text, 'html.parser')
     return len(soup.select("div.notice.error")) <= 0
 
-def getVideoIds(sess, mylistId):
-    videoIds = args
+def getVideoIds(sess, mode, args):
+    videoIdTitlePairs = [(None, arg) for arg in args]
 
     if mode == "m":
-        mylistUrl = "http://www.nicovideo.jp/mylist/%s" % mylistId
+        mylistId = args[0]
+        mylistUrl = "http://www.nicovideo.jp/mylist/%s?rss=2.0" % mylistId
         response = sess.get(mylistUrl)
         soup = BeautifulSoup(response.text, 'html.parser')
-        print len(soup.find_all("a", class_="watch"))
-    return videoIds
+
+        videoIdTitlePairs = [(item.find("link").get_text().split("/")[-1], item.find("title").get_text()) for item in soup.find_all("item")]
+    return videoIdTitlePairs
 
 with requests.session() as sess:
     if login(sess, nicoId, nicoPw):
-        videoIds = getVideoIds(sess, mode, args)
-        exit()
+        videoIdTitlePairs = getVideoIds(sess, mode, args)
 
-        videoPageUrls = ["http://www.nicovideo.jp/watch/%s?watch_harmful=1" % videoId for videoId in videoIds]
-        videoApiUrls = ["http://flapi.nicovideo.jp/api/getflv/%s?as3=1" % videoId for videoId in videoIds]
+        videoPageUrls = ["http://www.nicovideo.jp/watch/%s?watch_harmful=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
+        videoApiUrls = ["http://flapi.nicovideo.jp/api/getflv/%s?as3=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
         
-        for i in trange(len(videoIds)):
+        for i in trange(len(videoIdTitlePairs)):
             # Load video page is mandatory for downloading video
             response = sess.get(videoPageUrls[i])
             soup = BeautifulSoup(response.text, 'html.parser')
