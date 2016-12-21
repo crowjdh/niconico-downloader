@@ -15,6 +15,14 @@ nicoPw = sys.argv[2]
 videoIds = sys.argv[3:]
 
 def downloadVideo(sess, url, title):
+    # if True:
+    #     import time
+    #     start = time.time()*1000.0
+    #     print len(sess.get(url).content)
+    #     end = time.time()*1000.0
+    #     print "Time taken: %s" % str(end - start)
+    #     return
+
     response = sess.get(url, stream=True)
     total_length = int(response.headers.get('Content-Length', 0))
     
@@ -35,9 +43,12 @@ def downloadVideo(sess, url, title):
         os.makedirs(directoryName)
 
     with open(filePath, "wb") as handle:
-        for data in tqdm(response.iter_content(), total=total_length):
+        pbar = tqdm(total = total_length)
+        for data in response.iter_content(chunk_size=1024):
             handle.write(data)
-            # handle.flush()
+            pbar.update(len(data))
+        # for data in tqdm(response.iter_content(chunk_size=1024), total=total_length):
+        #     handle.write(data)
             
 with requests.session() as sess:
     loginUrl = "https://secure.nicovideo.jp/secure/login?site=niconico&mail=%s&password=%s" % (nicoId, nicoPw)
