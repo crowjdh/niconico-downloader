@@ -1,0 +1,3 @@
+[submodule "libraries/downloadmanager"]
+	path = libraries/downloadmanager
+	url = https://ChrisJeong@bitbucket.org/ChrisJeong/downloadmanager.git

@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import urllib
 from tqdm import tqdm, trange
 import requests
@@ -7,6 +8,8 @@ from time import sleep
 from bs4 import BeautifulSoup
 from mimetypes import guess_extension
 import unicodedata
+from libraries.downloadmanager import downloader
+from libraries.downloadmanager.item import Item
 
 def downloadVideo(sess, url, title):
     response = sess.get(url, stream=True)
@@ -73,15 +76,22 @@ if __name__ == "__main__":
             videoPageUrls = ["http://www.nicovideo.jp/watch/%s?watch_harmful=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
             videoApiUrls = ["http://flapi.nicovideo.jp/api/getflv/%s?as3=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
             
-            for i in trange(len(videoIdTitlePairs)):
+            itemsArr = []
+
+            for i in range(len(videoIdTitlePairs)):
                 # Load video page is mandatory for downloading video
-                response = sess.get(videoPageUrls[i])
-                soup = BeautifulSoup(response.text, 'html.parser')
-                title = soup.select("span.videoHeaderTitle")[0].get_text()
+                sess.get(videoPageUrls[i])
                 
                 apiResult = sess.get(videoApiUrls[i]).text
                 apiResultDict = dict([(pair.split("=")) for pair in apiResult.split("&")])
                 videoUrl = urllib.unquote(apiResultDict['url']).decode('utf8')
+                itemsArr.append(Item(videoUrl, title = videoIdTitlePairs[i][1]))
+
+                print "Retrieved item at %d. Pull back for awhile..." % i
+                time.sleep(3)
                 
-                downloadVideo(sess, videoUrl, title)
-                
+                # downloadVideo(sess, videoUrl, title)
+
+            def beforeRequest(idx):
+                sess.get(videoPageUrls[idx])
+            downloader.batchDownload(itemsArr, outputPath, sess = sess, beforeRequest = beforeRequest)
