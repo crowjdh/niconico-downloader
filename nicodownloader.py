@@ -2,12 +2,13 @@ import os
 import sys
 import time
 import urllib
-from tqdm import tqdm, trange
 import requests
 from time import sleep
 from bs4 import BeautifulSoup
 from mimetypes import guess_extension
 import unicodedata
+from dateutil import parser as dateparser
+import nicoargparser
 from libraries.downloadmanager import downloader
 from libraries.downloadmanager.item import Item
 
@@ -44,51 +45,40 @@ def login(sess, nicoId, nicoPw):
     soup = BeautifulSoup(response.text, 'html.parser')
     return len(soup.select("div.notice.error")) <= 0
 
-def getVideoIds(sess, mode, args):
-    videoIdTitlePairs = [(None, arg) for arg in args]
-
-    if mode == "m":
-        mylistId = args[0]
-        sliceRange = args[1].split(':')
-
-        mylistUrl = "http://www.nicovideo.jp/mylist/%s?rss=2.0" % mylistId
+def getVideoIds(sess, args):
+    if args.mode == "m":
+        mylistUrl = "http://www.nicovideo.jp/mylist/%s?rss=2.0" % args.mylistId
         response = sess.get(mylistUrl)
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        videoIdTitlePairs = [(item.find("link").get_text().split("/")[-1], item.find("title").get_text()) for item in soup.find_all("item")]
-        videoIdTitlePairs = sliceWithRange(videoIdTitlePairs, sliceRange)
+        videoIdTitleTuples = [(item.find("link").get_text().split("/")[-1], item.find("title").get_text(), item.find("pubdate").get_text()) for item in soup.find_all("item")]
+        if args.sort:
+            videoIdTitleTuples.sort(key=lambda tuple: dateparser.parse(tuple[2]))
+
+        videoIdTitlePairs = [(element[0], element[1]) for element in videoIdTitleTuples]
+        videoIdTitlePairs = sliceWithRange(videoIdTitlePairs, args.range)
+    else:
+        videoIdTitlePairs = [(None, arg) for arg in args.videoId]
     return videoIdTitlePairs
 
 def sliceWithRange(arr, sliceRange):
-    reverse = True if len(sliceRange) >= 3 and sliceRange[2] == '-1' else False
-
     sliceFrom = int(sliceRange[0])
     sliceCount = int(sliceRange[1])
     sliceTo = sliceFrom + sliceCount
     stride = 1
-    if reverse:
-        endIdx = len(arr) - 1
-        sliceFrom = endIdx - sliceFrom
-        sliceTo = endIdx - sliceTo
-        stride = -1
+    # if reverse:
+    #     endIdx = len(arr) - 1
+    #     sliceFrom = endIdx - sliceFrom
+    #     sliceTo = endIdx - sliceTo
+    #     stride = -1
     return arr[sliceFrom:sliceTo:stride]
 
 if __name__ == "__main__":
-    if len(sys.argv) < 6:
-        print "Usage:"
-        print "With video ids: python filename email pw outputPath v videoId [videoIds]"
-        print "With mylist ids: python filename email pw outputPath m mylistId [startIdx:count[:sort(-1 for reversed order)]]"
-        sys.exit()
-        
-    nicoId = sys.argv[1]
-    nicoPw = sys.argv[2]
-    outputPath = sys.argv[3]
-    mode = sys.argv[4]
-    args = sys.argv[5:]
+    args = nicoargparser.parse()
 
     with requests.session() as sess:
-        if login(sess, nicoId, nicoPw):
-            videoIdTitlePairs = getVideoIds(sess, mode, args)
+        if login(sess, args.email, args.password):
+            videoIdTitlePairs = getVideoIds(sess, args)
 
             videoPageUrls = ["http://www.nicovideo.jp/watch/%s?watch_harmful=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
             videoApiUrls = ["http://flapi.nicovideo.jp/api/getflv/%s?as3=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
@@ -111,4 +101,4 @@ if __name__ == "__main__":
 
             def beforeRequest(idx):
                 sess.get(videoPageUrls[idx])
-            downloader.batchDownload(itemsArr, outputPath, sess = sess, beforeRequest = beforeRequest)
+            downloader.batchDownload(itemsArr, args.outputPath, sess = sess, beforeRequest = beforeRequest, processes = args.processes)
