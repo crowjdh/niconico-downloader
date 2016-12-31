@@ -49,18 +49,35 @@ def getVideoIds(sess, mode, args):
 
     if mode == "m":
         mylistId = args[0]
+        sliceRange = args[1].split(':')
+
         mylistUrl = "http://www.nicovideo.jp/mylist/%s?rss=2.0" % mylistId
         response = sess.get(mylistUrl)
         soup = BeautifulSoup(response.text, 'html.parser')
 
         videoIdTitlePairs = [(item.find("link").get_text().split("/")[-1], item.find("title").get_text()) for item in soup.find_all("item")]
+        videoIdTitlePairs = sliceWithRange(videoIdTitlePairs, sliceRange)
     return videoIdTitlePairs
+
+def sliceWithRange(arr, sliceRange):
+    reverse = True if len(sliceRange) >= 3 and sliceRange[2] == '-1' else False
+
+    sliceFrom = int(sliceRange[0])
+    sliceCount = int(sliceRange[1])
+    sliceTo = sliceFrom + sliceCount
+    stride = 1
+    if reverse:
+        endIdx = len(arr) - 1
+        sliceFrom = endIdx - sliceFrom
+        sliceTo = endIdx - sliceTo
+        stride = -1
+    return arr[sliceFrom:sliceTo:stride]
 
 if __name__ == "__main__":
     if len(sys.argv) < 6:
         print "Usage:"
         print "With video ids: python filename email pw outputPath v videoId [videoIds]"
-        print "With mylist ids: python filename email pw outputPath m mylistId"
+        print "With mylist ids: python filename email pw outputPath m mylistId [startIdx:count[:sort(-1 for reversed order)]]"
         sys.exit()
         
     nicoId = sys.argv[1]
