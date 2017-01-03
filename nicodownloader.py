@@ -12,33 +12,7 @@ import nicoargparser
 from libraries.downloadmanager import downloader
 from libraries.downloadmanager.item import Item
 
-def downloadVideo(sess, url, title):
-    response = sess.get(url, stream=True)
-    total_length = int(response.headers.get('Content-Length', 0))
-    
-    contentType = response.headers.get('Content-Type')
-    extension = guess_extension(contentType)
-    if extension is None:
-        extensionCandidates = contentType.split("/")
-        if len(extensionCandidates) > 1:
-            extension = "." + extensionCandidates[1]
-        else:
-            extension = ""
-
-    fileName = title + extension
-    filePath = os.path.join(outputPath, fileName)
-
-    if not os.path.exists(outputPath):
-        os.makedirs(outputPath)
-
-    with open(filePath, "wb") as handle:
-        pbar = tqdm(total = total_length)
-        for data in response.iter_content(chunk_size=1024):
-            handle.write(data)
-            pbar.update(len(data))
-        # for data in tqdm(response.iter_content(chunk_size=1024), total=total_length):
-        #     handle.write(data)
-
+# TODO: Handle when id/pw is incorrect
 def login(sess, nicoId, nicoPw):
     loginUrl = "https://secure.nicovideo.jp/secure/login?site=niconico&mail=%s&password=%s" % (nicoId, nicoPw)
     response = sess.post(loginUrl)
@@ -66,12 +40,19 @@ def sliceWithRange(arr, sliceRange):
     sliceCount = int(sliceRange[1])
     sliceTo = sliceFrom + sliceCount
     stride = 1
-    # if reverse:
-    #     endIdx = len(arr) - 1
-    #     sliceFrom = endIdx - sliceFrom
-    #     sliceTo = endIdx - sliceTo
-    #     stride = -1
     return arr[sliceFrom:sliceTo:stride]
+
+def reprint(msg):
+    global longestLengthReprinted
+    msgLength = len(msg)
+    if 'longestLengthReprinted' not in globals():
+        longestLengthReprinted = 0
+    if msgLength < longestLengthReprinted:
+        msg += ' ' * (longestLengthReprinted - msgLength)
+    longestLengthReprinted = msgLength
+    print msg,
+    sys.stdout.flush()
+    print "\r",
 
 if __name__ == "__main__":
     args = nicoargparser.parse()
@@ -85,7 +66,11 @@ if __name__ == "__main__":
             
             itemsArr = []
 
-            for i in range(len(videoIdTitlePairs)):
+            itemCnt = len(videoIdTitlePairs)
+            for i in range(itemCnt):
+                itemProgressMsg = "{0}/{1}".format(i + 1, itemCnt)
+                reprint("Retrieving item {0}".format(itemProgressMsg))
+
                 # Load video page is mandatory for downloading video
                 sess.get(videoPageUrls[i])
                 
@@ -94,11 +79,12 @@ if __name__ == "__main__":
                 videoUrl = urllib.unquote(apiResultDict['url']).decode('utf8')
                 itemsArr.append(Item(videoUrl, title = videoIdTitlePairs[i][1]))
 
-                print "Retrieved item at %d. Pull back for awhile..." % i
-                time.sleep(3)
-                
-                # downloadVideo(sess, videoUrl, title)
+                pullbackInSec = 3
+                for pullbackLeft in range(pullbackInSec, 0, -1):
+                    reprint("Retrieved item {0}. Pull back left: {1}".format(itemProgressMsg, pullbackLeft))
+                    time.sleep(1)
 
             def beforeRequest(idx):
                 sess.get(videoPageUrls[idx])
+            
             downloader.batchDownload(itemsArr, args.outputPath, sess = sess, beforeRequest = beforeRequest, processes = args.processes)
