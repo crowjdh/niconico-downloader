@@ -54,37 +54,49 @@ def reprint(msg):
     sys.stdout.flush()
     print "\r",
 
+def createDummyItems(count):
+    items = []
+    for i in range(count):
+        items.append(Item("http://download.thinkbroadband.com/5MB.zip"))
+        items.append(Item("http://download.thinkbroadband.com/10MB.zip"))
+        items.append(Item("http://download.thinkbroadband.com/20MB.zip"))
+    return items
+
 if __name__ == "__main__":
     args = nicoargparser.parse()
 
-    with requests.session() as sess:
-        if login(sess, args.email, args.password):
-            videoIdTitlePairs = getVideoIds(sess, args)
+    if args.debug:
+        downloader.batchDownload(createDummyItems(14), args.outputPath, processes = args.processes)
 
-            videoPageUrls = ["http://www.nicovideo.jp/watch/%s?watch_harmful=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
-            videoApiUrls = ["http://flapi.nicovideo.jp/api/getflv/%s?as3=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
-            
-            itemsArr = []
+    else:
+        with requests.session() as sess:
+            if login(sess, args.email, args.password):
+                videoIdTitlePairs = getVideoIds(sess, args)
 
-            itemCnt = len(videoIdTitlePairs)
-            for i in range(itemCnt):
-                itemProgressMsg = "{0}/{1}".format(i + 1, itemCnt)
-                reprint("Retrieving item {0}".format(itemProgressMsg))
-
-                # Load video page is mandatory for downloading video
-                sess.get(videoPageUrls[i])
+                videoPageUrls = ["http://www.nicovideo.jp/watch/%s?watch_harmful=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
+                videoApiUrls = ["http://flapi.nicovideo.jp/api/getflv/%s?as3=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
                 
-                apiResult = sess.get(videoApiUrls[i]).text
-                apiResultDict = dict([(pair.split("=")) for pair in apiResult.split("&")])
-                videoUrl = urllib.unquote(apiResultDict['url']).decode('utf8')
-                itemsArr.append(Item(videoUrl, title = videoIdTitlePairs[i][1]))
+                itemsArr = []
 
-                pullbackInSec = 3
-                for pullbackLeft in range(pullbackInSec, 0, -1):
-                    reprint("Retrieved item {0}. Pull back left: {1}".format(itemProgressMsg, pullbackLeft))
-                    time.sleep(1)
+                itemCnt = len(videoIdTitlePairs)
+                for i in range(itemCnt):
+                    itemProgressMsg = "{0}/{1}".format(i + 1, itemCnt)
+                    reprint("Retrieving item {0}".format(itemProgressMsg))
 
-            def beforeRequest(idx):
-                sess.get(videoPageUrls[idx])
-            
-            downloader.batchDownload(itemsArr, args.outputPath, sess = sess, beforeRequest = beforeRequest, processes = args.processes)
+                    # Load video page is mandatory for downloading video
+                    sess.get(videoPageUrls[i])
+                    
+                    apiResult = sess.get(videoApiUrls[i]).text
+                    apiResultDict = dict([(pair.split("=")) for pair in apiResult.split("&")])
+                    videoUrl = urllib.unquote(apiResultDict['url']).decode('utf8')
+                    itemsArr.append(Item(videoUrl, title = videoIdTitlePairs[i][1]))
+
+                    pullbackInSec = 3
+                    for pullbackLeft in range(pullbackInSec, 0, -1):
+                        reprint("Retrieved item {0}. Pull back left: {1}".format(itemProgressMsg, pullbackLeft))
+                        time.sleep(1)
+
+                def beforeRequest(idx):
+                    sess.get(videoPageUrls[idx])
+
+                downloader.batchDownload(itemsArr, args.outputPath, sess = sess, beforeRequest = beforeRequest, processes = args.processes)

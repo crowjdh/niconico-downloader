@@ -12,11 +12,12 @@ def rangeFilter(r):
 
 def parse():
 	parser = argparse.ArgumentParser(description='Niconico douga downloader')
-	# parser.add_argument('-email', action="store_true", default=False)
+	
 	parser.add_argument('email', help='E-mail ID')
 	parser.add_argument('password', help='Password')
 	parser.add_argument('-o', dest='outputPath', help='Output path', default='output')
 	parser.add_argument('-p', '--processes', help='Concurrent processes count(default: {0})'.format(defaultProcessesCount), default=defaultProcessesCount, type=int)
+	parser.add_argument('-d', dest='debug', help='Debug mode', action='store_true')
 
 	subparsers = parser.add_subparsers(help='Mode')
 
