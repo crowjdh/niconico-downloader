@@ -46,7 +46,7 @@ def sliceWithRange(arr, sliceRange):
     stride = 1
     return arr[sliceFrom:sliceTo:stride]
 
-def reprint(msg):
+def overprint(msg, addNewLine = False):
     global longestLengthReprinted
     msgLength = len(msg)
     if 'longestLengthReprinted' not in globals():
@@ -56,7 +56,10 @@ def reprint(msg):
     longestLengthReprinted = msgLength
     print msg,
     sys.stdout.flush()
-    print "\r",
+    if not addNewLine:
+        print "\r",
+    else:
+        print ""
 
 def createDummyItems(count):
     items = []
@@ -74,7 +77,7 @@ def getItems(videoIdTitlePairs):
     itemCnt = len(videoIdTitlePairs)
     for i in range(itemCnt):
         itemProgressMsg = "{0}/{1}".format(i + 1, itemCnt)
-        reprint("Retrieving item {0}".format(itemProgressMsg))
+        overprint("Retrieving item {0}".format(itemProgressMsg))
 
         # Load video page is mandatory for downloading video
         sess.get(videoPageUrls[i])
@@ -86,7 +89,7 @@ def getItems(videoIdTitlePairs):
 
         pullbackInSec = 3
         for pullbackLeft in range(pullbackInSec, 0, -1):
-            reprint("Retrieved item {0}. Pull back left: {1}".format(itemProgressMsg, pullbackLeft))
+            overprint("Retrieved item {0}. Pull back left: {1}".format(itemProgressMsg, pullbackLeft))
             time.sleep(1)
     return items
 
@@ -98,7 +101,9 @@ if __name__ == "__main__":
 
     else:
         with requests.session() as sess:
+            overprint("Logging in...")
             if login(sess, args.email, args.password):
+                overprint("Logged in.", addNewLine = True)
                 videoIdTitlePairs = getVideoIds(sess, args)
                 items = getItems(videoIdTitlePairs)
 
