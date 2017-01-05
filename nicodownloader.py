@@ -12,6 +12,8 @@ import nicoargparser
 from libraries.downloadmanager import downloader
 from libraries.downloadmanager.item import Item
 
+encoding = 'UTF-8'
+
 # TODO: Handle when id/pw is incorrect
 def login(sess, nicoId, nicoPw):
     loginUrl = "https://secure.nicovideo.jp/secure/login?site=niconico&mail=%s&password=%s" % (nicoId, nicoPw)
@@ -25,7 +27,7 @@ def getVideoIds(sess, args):
         response = sess.get(mylistUrl)
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        videoIdTitleTuples = [(item.find("link").get_text().split("/")[-1], item.find("title").get_text(), item.find("pubdate").get_text()) for item in soup.find_all("item")]
+        videoIdTitleTuples = [(item.find("link").get_text().split("/")[-1], item.find("title").get_text().encode(encoding), item.find("pubdate").get_text()) for item in soup.find_all("item")]
         if args.sort:
             videoIdTitleTuples.sort(key=lambda tuple: dateparser.parse(tuple[2]))
 
@@ -88,7 +90,7 @@ if __name__ == "__main__":
                     
                     apiResult = sess.get(videoApiUrls[i]).text
                     apiResultDict = dict([(pair.split("=")) for pair in apiResult.split("&")])
-                    videoUrl = urllib.unquote(apiResultDict['url']).decode('utf8')
+                    videoUrl = urllib.unquote(apiResultDict['url']).decode(encoding)
                     itemsArr.append(Item(videoUrl, title = videoIdTitlePairs[i][1]))
 
                     pullbackInSec = 3
@@ -99,4 +101,4 @@ if __name__ == "__main__":
                 def beforeRequest(idx):
                     sess.get(videoPageUrls[idx])
 
-                downloader.batchDownload(itemsArr, args.outputPath, sess = sess, beforeRequest = beforeRequest, processes = args.processes)
+                downloader.batchDownload(itemsArr, args.outputPath, sess = sess, beforeRequest = beforeRequest, processes = args.processes, printEncoding = encoding)
