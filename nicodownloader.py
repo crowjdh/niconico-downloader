@@ -14,7 +14,6 @@ from libraries.downloadmanager.item import Item
 
 encoding = 'UTF-8'
 
-# TODO: Handle when id/pw is incorrect
 def login(sess, nicoId, nicoPw):
     loginUrl = "https://secure.nicovideo.jp/secure/login?site=niconico&mail=%s&password=%s" % (nicoId, nicoPw)
     response = sess.post(loginUrl)
@@ -27,7 +26,8 @@ def getVideoIds(sess, args):
         response = sess.get(mylistUrl)
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        videoIdTitleTuples = [(item.find("link").get_text().split("/")[-1], item.find("title").get_text().encode(encoding), item.find("pubdate").get_text()) for item in soup.find_all("item")]
+        videoIdTitleTuples = [(item.find("link").get_text().split("/")[-1], item.find("title").get_text().encode(encoding), item.find("pubdate").get_text())
+        				for item in soup.find_all("item")]
         if args.sort:
             videoIdTitleTuples.sort(key=lambda tuple: dateparser.parse(tuple[2]))
 
@@ -66,6 +66,30 @@ def createDummyItems(count):
         items.append(Item("http://download.thinkbroadband.com/20MB.zip"))
     return items
 
+def getItems(videoIdTitlePairs):
+    videoPageUrls = ["http://www.nicovideo.jp/watch/%s?watch_harmful=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
+    videoApiUrls = ["http://flapi.nicovideo.jp/api/getflv/%s?as3=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
+    items = []
+
+    itemCnt = len(videoIdTitlePairs)
+    for i in range(itemCnt):
+        itemProgressMsg = "{0}/{1}".format(i + 1, itemCnt)
+        reprint("Retrieving item {0}".format(itemProgressMsg))
+
+        # Load video page is mandatory for downloading video
+        sess.get(videoPageUrls[i])
+        
+        apiResult = sess.get(videoApiUrls[i]).text
+        apiResultDict = dict([(pair.split("=")) for pair in apiResult.split("&")])
+        videoUrl = urllib.unquote(apiResultDict['url']).decode(encoding)
+        items.append(Item(videoUrl, title = videoIdTitlePairs[i][1]))
+
+        pullbackInSec = 3
+        for pullbackLeft in range(pullbackInSec, 0, -1):
+            reprint("Retrieved item {0}. Pull back left: {1}".format(itemProgressMsg, pullbackLeft))
+            time.sleep(1)
+    return items
+
 if __name__ == "__main__":
     args = nicoargparser.parse()
 
@@ -76,31 +100,12 @@ if __name__ == "__main__":
         with requests.session() as sess:
             if login(sess, args.email, args.password):
                 videoIdTitlePairs = getVideoIds(sess, args)
-
-                videoPageUrls = ["http://www.nicovideo.jp/watch/%s?watch_harmful=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
-                videoApiUrls = ["http://flapi.nicovideo.jp/api/getflv/%s?as3=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
-                
-                itemsArr = []
-
-                itemCnt = len(videoIdTitlePairs)
-                for i in range(itemCnt):
-                    itemProgressMsg = "{0}/{1}".format(i + 1, itemCnt)
-                    reprint("Retrieving item {0}".format(itemProgressMsg))
-
-                    # Load video page is mandatory for downloading video
-                    sess.get(videoPageUrls[i])
-                    
-                    apiResult = sess.get(videoApiUrls[i]).text
-                    apiResultDict = dict([(pair.split("=")) for pair in apiResult.split("&")])
-                    videoUrl = urllib.unquote(apiResultDict['url']).decode(encoding)
-                    itemsArr.append(Item(videoUrl, title = videoIdTitlePairs[i][1]))
-
-                    pullbackInSec = 3
-                    for pullbackLeft in range(pullbackInSec, 0, -1):
-                        reprint("Retrieved item {0}. Pull back left: {1}".format(itemProgressMsg, pullbackLeft))
-                        time.sleep(1)
+                items = getItems(videoIdTitlePairs)
 
                 def beforeRequest(idx):
                     sess.get(videoPageUrls[idx])
 
-                downloader.batchDownload(itemsArr, args.outputPath, sess = sess, beforeRequest = beforeRequest, processes = args.processes, printEncoding = encoding)
+                downloader.batchDownload(items, args.outputPath, sess = sess, beforeRequest = beforeRequest,
+                	processes = args.processes, printEncoding = encoding)
+            else:
+                print "Login failed. Check your ID or password again."
