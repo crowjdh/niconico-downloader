@@ -13,6 +13,8 @@ from libraries.downloadmanager import downloader
 from libraries.downloadmanager.item import Item
 
 encoding = 'UTF-8'
+FORMAT_URL_VIDEO_PAGE = "http://www.nicovideo.jp/watch/{0}?watch_harmful=1"
+FORMAT_URL_API_GETFLV = "http://flapi.nicovideo.jp/api/getflv/{0}?as3=1"
 
 def login(sess, nicoId, nicoPw):
     loginUrl = "https://secure.nicovideo.jp/secure/login?site=niconico&mail=%s&password=%s" % (nicoId, nicoPw)
@@ -70,8 +72,8 @@ def createDummyItems(count):
     return items
 
 def getItems(videoIdTitlePairs):
-    videoPageUrls = ["http://www.nicovideo.jp/watch/%s?watch_harmful=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
-    videoApiUrls = ["http://flapi.nicovideo.jp/api/getflv/%s?as3=1" % videoIdTitlePair[0] for videoIdTitlePair in videoIdTitlePairs]
+    videoPageUrls = [FORMAT_URL_VIDEO_PAGE.format(videoIdTitlePair[0]) for videoIdTitlePair in videoIdTitlePairs]
+    videoApiUrls = [FORMAT_URL_API_GETFLV.format(videoIdTitlePair[0]) for videoIdTitlePair in videoIdTitlePairs]
     items = []
 
     itemCnt = len(videoIdTitlePairs)
@@ -108,7 +110,8 @@ if __name__ == "__main__":
                 items = getItems(videoIdTitlePairs)
 
                 def beforeRequest(idx):
-                    sess.get(videoPageUrls[idx])
+                    videoPageUrl = FORMAT_URL_VIDEO_PAGE.format(videoIdTitlePairs[idx][0])
+                    sess.get(videoPageUrl)
 
                 downloader.batchDownload(items, args.outputPath, sess = sess, beforeRequest = beforeRequest,
                 	processes = args.processes, printEncoding = encoding)
