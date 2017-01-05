@@ -38,6 +38,8 @@ def getVideoIds(sess, args):
     return videoIdTitlePairs
 
 def sliceWithRange(arr, sliceRange):
+    if sliceRange is None:
+        return arr
     sliceFrom = int(sliceRange[0])
     sliceCount = int(sliceRange[1])
     sliceTo = sliceFrom + sliceCount
