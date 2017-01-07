@@ -36,7 +36,7 @@ def getVideoIds(sess, args):
         videoIdTitlePairs = [(element[0], element[1]) for element in videoIdTitleTuples]
         videoIdTitlePairs = sliceWithRange(videoIdTitlePairs, args.range)
     else:
-        videoIdTitlePairs = [(None, arg) for arg in args.videoId]
+        videoIdTitlePairs = [(arg, None) for arg in args.videoId]
     return videoIdTitlePairs
 
 def sliceWithRange(arr, sliceRange):
