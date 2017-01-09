@@ -5,7 +5,7 @@ Niconico video downloader for Python(CLI)
 - Supports "Resume Download"
 
 # Preview
-Add preview
+![preview](/images/preview_01.png)
 
 # Prerequisite
 virtualenv(Add link)
