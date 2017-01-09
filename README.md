@@ -8,10 +8,13 @@ Niconico video downloader for Python(CLI)
 ![preview](/images/preview_01.png)
 
 # Prerequisite
-virtualenv(Add link)
+- [Virtualenv](https://virtualenv.pypa.io/en/stable/)
 
 ```
+MacBook-Pro:nicodownloader User$ [sudo] pip install virtualenv
 MacBook-Pro:nicodownloader User$ virtualenv venv
+MacBook-Pro:nicodownloader User$ source venv/bin/activate
+MacBook-Pro:nicodownloader User$ pip install -r requirements.txt
 ```
 
 # Dependencies
@@ -19,7 +22,9 @@ See [requirements.txt](/requirements.txt)
 
 # Usage
 ## Setup
-source venv/bin/activate
+```
+MacBook-Pro:nicodownloader User$ source venv/bin/activate
+```
 
 ### Using Video ID(s)
 ```
