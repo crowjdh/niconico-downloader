@@ -1,6 +1,8 @@
 # Niconico Video Downloader
 Niconico video downloader for Python(CLI)
-Support Video ID(s) or MyList ID with range
+
+- Download by Video ID(s)/MyList ID (with range)
+- Supports "Resume Download"
 
 # Preview
 Add preview
