@@ -4,6 +4,7 @@ Niconico video downloader for Python(CLI)
 - Download by Video ID(s)/MyList ID (with range)
 - Supports "Resume Download"
 
+For those who uses Mac, see [NicoDownloader for MacOS](https://github.com/crowjdh/Nico-Downloader-for-MacOS)
 # Preview
 ![preview](/images/preview_01.png)
 
