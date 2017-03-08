@@ -31,5 +31,9 @@ def parse():
 	myListParser.add_argument('-s', dest='sort', help='Sort list(-1 for reversed order)', action='store_false')
 	myListParser.set_defaults(mode='m')
 
+	commentParser = subparsers.add_parser('c', help='Comments mode')
+	commentParser.add_argument('itemId', nargs='+', help='Video / MyList ID to download')
+	commentParser.set_defaults(mode='c')
+
 	return parser.parse_args()
 	
